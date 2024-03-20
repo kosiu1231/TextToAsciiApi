@@ -1,0 +1,6 @@
+@TextToAsciiApi_HostAddress = http://localhost:5261
+
+GET {{TextToAsciiApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
