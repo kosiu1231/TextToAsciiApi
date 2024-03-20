@@ -1,9 +1,27 @@
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+using TextToAsciiApi.Models;
+using TextToAsciiApi.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddScoped<AsciiGenerationService>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Policy1",
+        policy =>
+        {
+            policy.WithOrigins("http://127.0.0.1:5500")
+                                .AllowAnyHeader()
+                                .AllowAnyMethod();
+        });
+});
 
 var app = builder.Build();
 
@@ -16,29 +34,22 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+app.UseCors("Policy1");
 
-app.MapGet("/weatherforecast", () =>
+app.MapPost("/api/generate", async (
+    [FromBody] GenerationRequest request,
+    AsciiGenerationService asciiGenerationService,
+    HttpContext httpContext) =>
 {
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+    if (string.IsNullOrWhiteSpace(request.Value) || request.Value.Any(c => char.IsDigit(c)))
+        return Results.BadRequest("Invalid input value. Input should not be empty or contain digits.");
+
+    var response = await asciiGenerationService.GenerateArt(request);
+
+    if (string.IsNullOrEmpty(response.Art))
+        return Results.NotFound("Unable to generate ASCII art for the given input");
+
+    return Results.Ok(response);
+});
 
 app.Run();
-
-internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
