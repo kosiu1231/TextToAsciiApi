@@ -17,7 +17,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Policy1",
         policy =>
         {
-            policy.WithOrigins("https://text-to-ascii-nine.vercel.app")
+            policy.WithOrigins("https://text-to-ascii-nine.vercel.app", "http://127.0.0.1:5500")
                                 .AllowAnyHeader()
                                 .AllowAnyMethod();
         });
